@@ -1,0 +1,33 @@
+# Deployment
+
+Contains a bunch of terraform to deploy our infrastrcuture that we need for manuall testing.
+Can also be used as a base line when setting up your own solution.
+
+This is not production ready, I don't save my terraform state in a remote object storage due to OSS.
+You should though.
+
+## How to use
+
+Assumes the GCP project already exists, I was lazy so mine did.
+
+Create a `terraform.tfvars`that looks something like this:
+
+```.tfvars
+project_id = "super-fun-project-id"
+org_id     = "1234567"
+eligible_principals = [
+  "group:foo@example.com",
+]
+approver_principals = [
+  "user:bar@example.com",
+]
+```
+
+Apply the config
+
+```shell
+terraform init
+terraform apply -var-file=terraform.tfvars
+```
+
+You might have to apply the config two times, the APIs takes some time to enable.
