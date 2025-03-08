@@ -8,13 +8,15 @@ terraform {
 }
 
 provider "google" {
-  project = var.project_id
-  region  = "europe-west1"
+  project               = var.project_id
+  region                = "europe-west1"
+  user_project_override = true // without this google_cloud_asset_project_feed does not work
 }
 
 locals {
   enabled_services = [
     "privilegedaccessmanager.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
     "pubsub.googleapis.com",
     "run.googleapis.com",
     "cloudasset.googleapis.com",
@@ -47,6 +49,10 @@ resource "google_project_iam_member" "privilegedaccessmanager_service_agent" {
   member  = "serviceAccount:service-org-${var.org_id}@gcp-sa-pam.iam.gserviceaccount.com"
 }
 
+data "google_project" "project" {
+  project_id = var.project_id
+}
+
 
 // Tell cloud assets to send PAM messages to this topic
 resource "google_cloud_asset_project_feed" "pam-asset-inventory-feed" {
@@ -61,7 +67,7 @@ resource "google_cloud_asset_project_feed" "pam-asset-inventory-feed" {
 
   feed_output_config {
     pubsub_destination {
-      topic = google_pubsub_topic.this.name
+      topic = "projects/${var.project_id}/topics/${google_pubsub_topic.this.name}"
     }
   }
 }
@@ -95,10 +101,12 @@ resource "google_privileged_access_manager_entitlement" "pubsub_editor" {
     manual_approvals {
       require_approver_justification = false
       steps {
+        approvals_needed = 1
         approvers {
           principals = var.approver_principals
         }
       }
     }
   }
+  depends_on = [google_project_iam_member.privilegedaccessmanager_service_agent]
 }
